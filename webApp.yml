@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec:
+  replicas: 1 #more than 1 it needs to be a statefulSets to manage multiple connections tho the db
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp-container
+        image: nanajanashia/k8s-demo-app:v1.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-user
+        - name: USER_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-pwd
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-config
+              key: mongo-url  
+---
+apiVersion: v1
+kind: Service # set as external because by default the type is clusterIP which is internal. And while setting the nodePort choose from 30.000 to 32767
+metadata:
+  name: webapp-service
+spec:
+  type: NodePort
+  selector:
+    app: webapp # Car le service est appelé en 1er avant de rediriger vers les pods correspondants, pas les deployment, le deployment est juste un conteneur ce qui interesse c est le pod
+  ports:
+    - protocol: TCP
+      port: 3000 # can choose any number but to keep thing simple use the same value
+      targetPort: 3000 # should match the pod port
+      nodePort: 30101
+
